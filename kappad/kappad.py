@@ -109,6 +109,7 @@ if __name__ == '__main__':
     # Logger for basic application health info
     app_logger = logging.getLogger('app')
     app_handler = RotatingFileHandler(config_parser.get('app', 'log_file'),
+            encoding = "utf-8",
             maxBytes = config_parser.getint('app', 'log_file_size'),
             backupCount=100
             )
@@ -119,6 +120,7 @@ if __name__ == '__main__':
 
     # Logger for messages received in channel
     message_handler = RotatingFileHandler(config_parser.get('app', 'messages_file'),
+            encoding = "utf-8",
             maxBytes = config_parser.getint('app', 'messages_file_size'),
             backupCount=100
             )
