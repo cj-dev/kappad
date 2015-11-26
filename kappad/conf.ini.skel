@@ -1,8 +1,8 @@
 [app]
-log_file =
+log_dir =
 log_file_size =
-messages_file =
 messages_file_size =
+key =
 
 [irc]
 server =
