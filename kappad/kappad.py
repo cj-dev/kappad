@@ -8,6 +8,8 @@ from twisted.words.protocols import irc
 from twisted.internet import reactor, protocol
 from twisted.python import log
 
+from elasticsearch import Elasticsearch
+
 import sys, os
 import datetime
 import logging
@@ -20,16 +22,17 @@ from logging.handlers import RotatingFileHandler
 from ConfigParser import SafeConfigParser
 
 app_logger = None
+es = Elasticsearch() #currently localhosting
 
 class LogBot(irc.IRCClient):
     """A logging IRC bot."""
     
-    def __init__(self, channel, nickname, username, password, message_logger, key):
+    def __init__(self, channel, nickname, username, password, index, key):
         self.channel = channel
         self.nickname = nickname
         self.username = username
         self.password = password
-        self.message_logger = message_logger
+        self.index = index
         self.key = key
         app_logger.debug(textwrap.dedent("""
                 Initialized bot with channel: {channel},
@@ -58,12 +61,23 @@ class LogBot(irc.IRCClient):
         app_logger.info("Joined channel {0}".format(channel))
 
     def privmsg(self, user, channel, msg):
-        user = user.split('!', 1)[0]
-        message = msg[:140]
+        user = user.split('!', 1)[0].decode('utf-8')
+        message = msg[:140].decode('utf-8')
         hmac_obj = hmac.new(self.key, user, hashlib.sha256)
         user_hash = hmac_obj.hexdigest()
-        entry = "[{user}] {message}".format(user=user_hash, message=message).decode("utf-8")
-        self.message_logger.info(entry)
+        time = datetime.datetime.now()
+        document = {
+                "time": time,
+                "author": user_hash,
+                "message": message
+                }
+        try:
+            es.index(index=self.index, doc_type="message", body=document)
+        except TransportError as te:
+            app_logger.error("Failed to insert message into index because {0}".format(repr(te)))
+        except Exception as e:
+            app_logger.error(
+                    "Something really goofed when indexing message because {0}".format(repr(te)))
 
     def irc_PING(self, prefix, params):
         app_logger.info("Received ping")
@@ -76,12 +90,12 @@ class LogBotFactory(protocol.ClientFactory):
     Editor's note: I had a problem now I have a problem factory
     """
 
-    def __init__(self, channel, nickname, username, password, message_log, key):
+    def __init__(self, channel, nickname, username, password, index, key):
         self.nickname = nickname
         self.username = username
         self.password = password
         self.channel = channel
-        self.message_log = message_log
+        self.index = index
         self.key = key
 
     def buildProtocol(self, addr):
@@ -90,7 +104,7 @@ class LogBotFactory(protocol.ClientFactory):
                 self.nickname,
                 self.username,
                 self.password,
-                self.message_log,
+                self.index,
                 self.key
                 )
             p.factory = self
@@ -129,36 +143,19 @@ if __name__ == '__main__':
     app_logger.addHandler(app_handler)
     app_logger.setLevel(logging.DEBUG)
 
-    # Logger for messages received in channel
-    message_handler = RotatingFileHandler(os.path.join(config_parser.get('app', 'log_dir'), 'messages.log'),
-            encoding = "utf-8",
-            maxBytes = config_parser.getint('app', 'messages_file_size'),
-            backupCount=100
-            )
-    message_format = Formatter('%(asctime)s - %(message)s')
-    message_handler.setFormatter(message_format)
-    message_logger = logging.getLogger('messages')
-    message_logger.addHandler(message_handler)
-    message_logger.setLevel(logging.DEBUG)
-
     f = LogBotFactory(config_parser.get('irc', 'channel'),
             config_parser.get('irc', 'nick'),
             config_parser.get('irc', 'username'),
             config_parser.get('irc', 'password'),
-            message_logger,
-            config_parser.get('app', 'key'),
+            config_parser.get('elasticsearch', 'messages_index'),
+            config_parser.get('app', 'key')
             )
-
     reactor.connectTCP(config_parser.get('irc', 'server'),
             config_parser.getint('irc', 'port'),
             f
             )
     reactor.run()
 
-    handlers = message_logger.handlers[:]
-    for handler in handlers:
-        handler.close()
-        message_logger.removeHandler(handler)
     handlers = app_logger.handlers[:]
     for handler in handlers:
         handler.close()

@@ -1,7 +1,6 @@
 [app]
 log_dir =
 log_file_size =
-messages_file_size =
 key =
 
 [irc]
@@ -12,3 +11,5 @@ nick =
 username =
 password =
 
+[elasticsearch]
+messages_index =
