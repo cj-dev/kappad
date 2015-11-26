@@ -60,10 +60,10 @@ class LogBot(irc.IRCClient):
     def privmsg(self, user, channel, msg):
         user = user.split('!', 1)[0]
         message = msg[:140]
-        message = message.decode('utf-8')
         hmac_obj = hmac.new(self.key, user, hashlib.sha256)
         user_hash = hmac_obj.hexdigest()
-        self.message_logger.info("[{user}] {message}".format(user=user_hash, message=message))
+        entry = "[{user}] {message}".format(user=user_hash, message=message).decode("utf-8")
+        self.message_logger.info(entry)
 
     def irc_PING(self, prefix, params):
         app_logger.info("Received ping")
