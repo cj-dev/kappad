@@ -61,8 +61,8 @@ class LogBot(irc.IRCClient):
         app_logger.info("Joined channel {0}".format(channel))
 
     def privmsg(self, user, channel, msg):
-        user = user.split('!', 1)[0].decode('utf-8')
-        message = msg[:140].decode('utf-8')
+        user = user.split('!', 1)[0].encode('utf-8')
+        message = msg[:140].encode('utf-8')
         hmac_obj = hmac.new(self.key, user, hashlib.sha256)
         user_hash = hmac_obj.hexdigest()
         time = datetime.datetime.now()
