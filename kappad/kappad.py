@@ -143,21 +143,23 @@ if __name__ == '__main__':
     app_logger.addHandler(app_handler)
     app_logger.setLevel(logging.DEBUG)
 
-    f = LogBotFactory(config_parser.get('irc', 'channel'),
-            config_parser.get('irc', 'nick'),
-            config_parser.get('irc', 'username'),
-            config_parser.get('irc', 'password'),
-            config_parser.get('elasticsearch', 'messages_index'),
-            config_parser.get('app', 'key')
-            )
-    reactor.connectTCP(config_parser.get('irc', 'server'),
-            config_parser.getint('irc', 'port'),
-            f
-            )
-    reactor.run()
+    try:
+        f = LogBotFactory(config_parser.get('irc', 'channel'),
+                config_parser.get('irc', 'nick'),
+                config_parser.get('irc', 'username'),
+                config_parser.get('irc', 'password'),
+                config_parser.get('elasticsearch', 'messages_index'),
+                config_parser.get('app', 'key')
+                )
+        reactor.connectTCP(config_parser.get('irc', 'server'),
+                config_parser.getint('irc', 'port'),
+                f
+                )
+        reactor.run()
 
-    handlers = app_logger.handlers[:]
-    for handler in handlers:
-        handler.close()
-        app_logger.removeHandler(handler)
+    finally:
+        handlers = app_logger.handlers[:]
+        for handler in handlers:
+            handler.close()
+            app_logger.removeHandler(handler)
 
