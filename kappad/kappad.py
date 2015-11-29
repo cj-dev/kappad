@@ -77,7 +77,7 @@ class LogBot(irc.IRCClient):
             app_logger.error("Failed to insert message into index because {0}".format(repr(te)))
         except Exception as e:
             app_logger.error(
-                    "Something really goofed when indexing message because {0}".format(repr(te)))
+                    "Something really goofed when indexing message because {0}".format(repr(e)))
 
     def irc_PING(self, prefix, params):
         app_logger.info("Received ping")
